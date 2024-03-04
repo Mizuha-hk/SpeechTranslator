@@ -1,7 +1,7 @@
 ﻿using ObjCRuntime;
 using UIKit;
 
-namespace ShpeechTranslator
+namespace SpeechTranslator
 {
     public class Program
     {

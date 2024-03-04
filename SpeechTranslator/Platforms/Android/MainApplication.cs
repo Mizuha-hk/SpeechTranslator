@@ -1,7 +1,7 @@
 ﻿using Android.App;
 using Android.Runtime;
 
-namespace ShpeechTranslator
+namespace SpeechTranslator
 {
     [Application]
     public class MainApplication : MauiApplication

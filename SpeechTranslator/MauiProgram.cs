@@ -1,6 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
 
-namespace ShpeechTranslator
+namespace SpeechTranslator
 {
     public static class MauiProgram
     {

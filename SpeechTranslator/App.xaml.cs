@@ -1,4 +1,4 @@
-﻿namespace ShpeechTranslator
+﻿namespace SpeechTranslator
 {
     public partial class App : Application
     {

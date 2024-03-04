@@ -1,6 +1,6 @@
 ﻿using Foundation;
 
-namespace ShpeechTranslator
+namespace SpeechTranslator
 {
     [Register("AppDelegate")]
     public class AppDelegate : MauiUIApplicationDelegate
