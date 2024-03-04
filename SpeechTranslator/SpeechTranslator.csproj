@@ -66,4 +66,11 @@
 	  <ProjectReference Include="..\SpeechTranslator.Shared\SpeechTranslator.Shared.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <Folder Include="Models\" />
+	  <Folder Include="Views\" />
+	  <Folder Include="ViewModels\" />
+	  <Folder Include="Workers\" />
+	</ItemGroup>
+
 </Project>
