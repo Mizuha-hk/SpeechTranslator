@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using SpeechTranslator.Services;
 
 namespace SpeechTranslator
 {
@@ -14,6 +15,8 @@ namespace SpeechTranslator
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
                 });
+
+            builder.Services.AddSingleton<IAppLogger, AppLogger>();
 
 #if DEBUG
     		builder.Logging.AddDebug();
