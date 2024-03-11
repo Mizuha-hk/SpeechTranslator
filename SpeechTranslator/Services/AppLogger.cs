@@ -97,8 +97,15 @@ public class AppLogger: TraceListener, IAppLogger
         lock (_lock)
         {
             var recentLog = LogData[LogData.Count - 1];
-            recentLog.Message += message;
-            LogData[LogData.Count - 1] = recentLog;
+
+            if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, message ?? string.Empty));
+            }
+            else
+            {
+                recentLog.Message += message;
+            }
         }
     }
 
@@ -106,8 +113,18 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            LogData.Add(new LogData(LogType.Trace, message ?? string.Empty));
-            WriteToLogFile();
+            var recentLog = LogData[LogData.Count - 1];
+
+            if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, $"{message ?? string.Empty} {Environment.NewLine}"));
+                WriteToLogFile();
+            }
+            else
+            {
+                recentLog.Message += $"{message} {Environment.NewLine}";
+                WriteToLogFile();
+            }
         }
     }
 
@@ -115,8 +132,18 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            LogData.Add(new LogData(LogType.Trace, obj?.ToString() ?? string.Empty));
-            WriteToLogFile();
+            var recentLog = LogData[LogData.Count - 1];
+
+            if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, $"{obj?.ToString() ?? string.Empty} {Environment.NewLine}"));
+                WriteToLogFile();
+            }
+            else
+            {
+                recentLog.Message += $"{obj?.ToString() ?? string.Empty} {Environment.NewLine}";
+                WriteToLogFile();
+            }
         }
     }
 
@@ -124,7 +151,7 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            LogData.Add(new LogData(LogType.Error, message ?? string.Empty));
+            LogData.Add(new LogData(LogType.Error, $"{message ?? string.Empty} {Environment.NewLine}"));
             WriteToLogFile();
         }
     }
@@ -141,6 +168,13 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
+            var logData = LogData[LogData.Count - 1];
+            var logLine = $"{logData.Time}\t{logData.Type}: {logData.Message}{Environment.NewLine}";
+
+            var buffer = Encoding.UTF8.GetBytes(logLine);
+
+            _stream.Write(buffer, 0, buffer.Length);
+
             _stream?.Close();
         }
     }
