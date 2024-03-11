@@ -2,7 +2,7 @@
 using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Text;
-using static SpeechTranslator.Services.ILogger;
+using static SpeechTranslator.Services.IAppLogger;
 
 namespace SpeechTranslator.Services;
 
@@ -44,7 +44,7 @@ public class LogDataChangedEventArgs
     }
 }
 
-public class Logger: TraceListener, ILogger
+public class AppLogger: TraceListener, IAppLogger
 {
     private DateTime _logTime;
     private string _dateFormat = "yyyy-MM-dd";
@@ -57,7 +57,7 @@ public class Logger: TraceListener, ILogger
     private object _lock = new();
     private Stream _stream;
 
-    public Logger()
+    public AppLogger()
     {
         LogData.CollectionChanged += (sender, e) =>
         {

@@ -2,7 +2,7 @@
 
 namespace SpeechTranslator.Services;
 
-public interface ILogger
+public interface IAppLogger
 {
     ObservableCollection<LogData> LogData { get; }
 
