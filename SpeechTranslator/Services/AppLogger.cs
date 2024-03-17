@@ -14,7 +14,7 @@ public enum LogType
 
 public class LogData
 {
-    private string _logTimeFormat = "yyyy-MM-dd HH:mm:ss";
+    private readonly string _logTimeFormat = "yyyy-MM-dd HH:mm:ss";
 
     public LogType Type { get; set; } = LogType.Trace;
 
@@ -32,32 +32,25 @@ public class LogData
     }
 }
 
-public class LogDataChangedEventArgs
+public class LogDataChangedEventArgs(LogType type, string logData)
 {
-    public LogType Type { get; set; } = LogType.Trace;
-    public string LogData { get; set; } = string.Empty;
-
-    public LogDataChangedEventArgs(LogType type, string logData)
-    {
-        Type = type;
-        LogData = logData;
-    }
+    public LogType Type { get; set; } = type;
+    public string LogData { get; set; } = logData;
 }
 
 public class AppLogger: TraceListener, IAppLogger
 {
     private DateTime _logTime;
-    private string _dateFormat = "yyyy-MM-dd";
+    private readonly string _dateFormat = "yyyy-MM-dd";
     private int _suffix = 0;
     private string _logFileName;
     private string _logDirectory;
     private DirectoryInfo _logDirInfo;
     private string _logFilePath;
-    private long _maxLogFileSize = 1024 * 1024 * 10; // 10MB
-    private object _lock = new();
-    private Stream _stream;
+    private readonly long _maxLogFileSize = 1024 * 1024 * 10; // 10MB
+    private readonly object _lock = new();
 
-    public AppLogger()
+    public AppLogger(string appDataPath)
     {
         LogData.CollectionChanged += (sender, e) =>
         {
@@ -78,17 +71,16 @@ public class AppLogger: TraceListener, IAppLogger
         };
 
         _logTime = DateTime.Now;
-        _logDirectory = Path.Combine(FileSystem.AppDataDirectory, "logs", _logTime.ToString(_dateFormat));
+        _logDirectory = Path.Combine(appDataPath, "logs", _logTime.ToString(_dateFormat));
         _logFileName = ResolveLogFileName();
         _logFilePath = _logFileName = Path.Combine(_logDirectory, _logFileName);
 
         _logDirInfo = Directory.CreateDirectory(_logDirectory);
-        _stream = File.Open(_logFilePath, FileMode.Append);
 
-        LogData.Add(new LogData(LogType.Trace, "Logger initialized."));
+        LogData.Add(new LogData(LogType.Trace, "Logger initialized." + Environment.NewLine));
     }
 
-    public ObservableCollection<LogData> LogData { get; } = new();
+    public ObservableCollection<LogData> LogData { get; } = [];
 
     public event LogDataChangedEventHandler? LogDataChanged;
 
@@ -96,7 +88,13 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            var recentLog = LogData[LogData.Count - 1];
+            if(LogData.Count == 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, message ?? string.Empty));
+                return;
+            }
+
+            var recentLog = LogData[^1];
 
             if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
             {
@@ -113,16 +111,22 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            var recentLog = LogData[LogData.Count - 1];
+            if(LogData.Count == 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, $"{message ?? string.Empty}{Environment.NewLine}"));
+                return;
+            }
+
+            var recentLog = LogData[^1];
 
             if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
             {
-                LogData.Add(new LogData(LogType.Trace, $"{message ?? string.Empty} {Environment.NewLine}"));
+                LogData.Add(new LogData(LogType.Trace, $"{message ?? string.Empty}{Environment.NewLine}"));
                 WriteToLogFile();
             }
             else
             {
-                recentLog.Message += $"{message} {Environment.NewLine}";
+                recentLog.Message += $"{message}{Environment.NewLine}";
                 WriteToLogFile();
             }
         }
@@ -132,7 +136,13 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            var recentLog = LogData[LogData.Count - 1];
+            if(LogData.Count == 0)
+            {
+                LogData.Add(new LogData(LogType.Trace, $"{obj?.ToString() ?? string.Empty}{Environment.NewLine}"));
+                return;
+            }
+
+            var recentLog = LogData[^1];
 
             if(recentLog.Message.IndexOf(Environment.NewLine) > 0)
             {
@@ -141,7 +151,7 @@ public class AppLogger: TraceListener, IAppLogger
             }
             else
             {
-                recentLog.Message += $"{obj?.ToString() ?? string.Empty} {Environment.NewLine}";
+                recentLog.Message += $"{obj?.ToString() ?? string.Empty}{Environment.NewLine}";
                 WriteToLogFile();
             }
         }
@@ -151,7 +161,7 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            LogData.Add(new LogData(LogType.Error, $"{message ?? string.Empty} {Environment.NewLine}"));
+            LogData.Add(new LogData(LogType.Error, $"{message ?? string.Empty}{Environment.NewLine}"));
             WriteToLogFile();
         }
     }
@@ -160,6 +170,12 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
+            if(LogData.Count == 0)
+            {
+                return;
+            }
+
+            this.WriteLine("");
             LogData.Clear();
         }
     }
@@ -168,14 +184,15 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            var logData = LogData[LogData.Count - 1];
+            var logData = LogData[^1];
             var logLine = $"{logData.Time}\t{logData.Type}: {logData.Message}{Environment.NewLine}";
 
             var buffer = Encoding.UTF8.GetBytes(logLine);
 
-            _stream.Write(buffer, 0, buffer.Length);
+            using var stream = File.Open(_logFilePath, FileMode.Append);
+            stream.Write(buffer, 0, buffer.Length);
 
-            _stream?.Close();
+            stream?.Close();
         }
     }
 
@@ -183,7 +200,8 @@ public class AppLogger: TraceListener, IAppLogger
     {
         lock (_lock)
         {
-            _stream?.Flush();
+            using var stream = File.Open(_logFilePath, FileMode.Append);
+            stream?.Flush();
         }
     }
 
@@ -191,7 +209,8 @@ public class AppLogger: TraceListener, IAppLogger
     {
         if (disposing)
         {
-            _stream?.Dispose();
+            using var stream = File.Open(_logFilePath, FileMode.Append);
+            stream?.Dispose();
         }
         base.Dispose(disposing);
     }
@@ -235,14 +254,14 @@ public class AppLogger: TraceListener, IAppLogger
             _logFilePath = _logFileName = Path.Combine(_logDirectory, _logFileName);
 
             _logDirInfo = Directory.CreateDirectory(_logDirectory);
-            _stream = File.Open(_logFilePath, FileMode.Append);
         }
 
-        var logData = LogData[LogData.Count - 2];
+        var logData = LogData[^2];
         var logLine = $"{logData.Time}\t{logData.Type}: {logData.Message}{Environment.NewLine}";
 
         var buffer = Encoding.UTF8.GetBytes(logLine);
 
-        _stream.Write(buffer, 0, buffer.Length);
+        using var stream = File.Open(_logFilePath, FileMode.Append);
+        stream.Write(buffer, 0, buffer.Length);
     }
 }
